@@ -1,0 +1,196 @@
+#include <iostream>
+#include <fstream>
+#include <cstring>
+#include <cctype>
+#include <string>
+#include <sstream>
+#include <unordered_map>
+#pragma warning(disable : 4996)
+using namespace std;
+void preprocessBadChar(const char* pattern, unordered_map<char, int>& badChar) {
+    int patternLength = strlen(pattern);
+    for (int i = 0; i < patternLength; i++) {
+        badChar[pattern[i]] = i; 
+    }
+}
+
+void boyerMooreSearch(const char* text, const char* pattern) {
+    int textLength = strlen(text);
+    int patternLength = strlen(pattern);
+    unordered_map<char, int> badChar;
+
+    preprocessBadChar(pattern, badChar);
+
+    int shift = 0;
+    while (shift <= textLength - patternLength) {
+        int j = patternLength - 1;
+
+        while (j >= 0 && pattern[j] == text[shift + j]) {
+            j--;
+        }
+
+        if (j < 0) {
+            cout << "Найдено в позиции: " << shift << endl;
+            shift += (shift + patternLength < textLength) ? patternLength - badChar[text[shift + patternLength]] : 1;
+        }
+        else {
+            shift += max(1, j - badChar[text[shift + j]]);
+        }
+    }
+}
+
+void removeExtraSpaces(char* inputText) {
+    char temp[1000]; 
+    int j = 0; 
+
+    bool inSpace = false; 
+
+    for (int i = 0; inputText[i] != '\0'; ++i) {
+        if (inputText[i] != ' ') { 
+            temp[j++] = inputText[i]; 
+            inSpace = false; 
+        }
+        else if (!inSpace) { 
+            temp[j++] = ' '; 
+            inSpace = true; 
+        }
+    }
+    temp[j] = '\0'; 
+
+    strcpy(inputText, temp); 
+}
+
+void removeExtraPunctuation(char* inputText) {
+    char temp[1000];
+    int j = 0; 
+
+    for (int i = 0; inputText[i] != '\0'; ++i) {
+        if (ispunct(inputText[i])) {
+            if (i == 0 || !ispunct(inputText[i - 1])) { 
+                temp[j++] = inputText[i]; 
+            }
+        }
+        else {
+            temp[j++] = inputText[i]; 
+        }
+    }
+    temp[j] = '\0';
+
+    strcpy(inputText, temp); 
+}
+void correctCase(char* inputText) {
+    bool newSentence = true; 
+
+    for (int i = 0; inputText[i] != '\0'; ++i) {
+        if (newSentence && isalpha(inputText[i])) { 
+            inputText[i] = toupper(inputText[i]); 
+            newSentence = false; 
+        }
+        else {
+            inputText[i] = tolower(inputText[i]); 
+        }
+
+        if (inputText[i] == '.' || inputText[i] == '!' || inputText[i] == '?') {
+            newSentence = true; 
+        }
+    }
+}
+void editText(char* inputText) {
+    removeExtraSpaces(inputText);
+    removeExtraPunctuation(inputText);
+    correctCase(inputText);
+}
+void linearSearch(const char* text, const char* pattern) {
+    int textLength = strlen(text);
+    int patternLength = strlen(pattern);
+
+    for (int i = 0; i <= textLength - patternLength; i++) {
+        int j;
+        for (j = 0; j < patternLength; j++) {
+            if (text[i + j] != pattern[j]) {
+                break;
+            }
+        }
+        if (j == patternLength) {
+            cout << "Найдено в позиции: " << i << endl;
+        }
+    }
+}
+
+
+int main() {
+    setlocale(LC_ALL, "RU"); 
+    char inputText[1000]; 
+    const int MAX_LENGTH = 1000; 
+    char words[MAX_LENGTH][MAX_LENGTH]; 
+    int wordCount = 0; 
+    while (true) {
+        cout << "Введите с клавиатуры(1) или с файла(2), или 0 для выхода: ";
+        int choice;
+        cin >> choice;
+        cin.ignore(); 
+
+        if (choice == 0) {
+            break; 
+        }
+
+        if (choice == 1) {
+            cout << "Введите текст (может не заканчиваться точкой):\n";
+            cin.getline(inputText, sizeof(inputText));
+        }
+        else if (choice == 2) {
+            char fileName[100];
+            cout << "Введите имя файла:\n";
+            cin.getline(fileName, sizeof(fileName));
+
+            ifstream inputFile(fileName);
+            if (!inputFile.is_open()) {
+                cerr << "Ошибка открытия файла!" << endl;
+                continue;
+            }
+
+            inputFile.getline(inputText, sizeof(inputText));
+            inputFile.close();
+            cout << "Текст из файла: " << inputText << endl;
+        }
+        else {
+            cerr << "Неверный выбор!" << endl;
+            continue; 
+        }
+
+        editText(inputText);
+        cout << "Отредактированный текст: " << inputText << endl;
+        char* token = strtok(inputText, " "); 
+        while (token != nullptr) {
+            strcpy(words[wordCount++], token); 
+            token = strtok(nullptr, " "); 
+        }
+        cout << "Слова в обратном порядке: ";
+        for (int i = wordCount - 1; i >= 0; --i) {
+            cout << words[i] << ' '; 
+        }
+        cout << endl;
+        cout << "Количество символов в каждом слове:" << endl;
+        for (int i = 0; i < wordCount; ++i) {
+            cout << words[i] << ": " << strlen(words[i]) << " символов" << endl; 
+        }
+        char text[MAX_LENGTH];
+        char pattern[MAX_LENGTH];
+
+        cout << "Введите строку: ";
+        cin.getline(text, MAX_LENGTH);
+        cout << "Введите подстроку для поиска: ";
+        cin.getline(pattern, MAX_LENGTH);
+        cout << "Результаты линейного поиска:" << endl;
+        linearSearch(text, pattern);
+        cout << "Введите строку: ";
+        cin.getline(text, MAX_LENGTH);
+        cout << "Введите подстроку для поиска: ";
+        cin.getline(pattern, MAX_LENGTH);
+        cout << "Результаты алгоритма Бойера-Мура:" << endl;
+        boyerMooreSearch(text, pattern); 
+
+    }
+
+    return 0;
+}
